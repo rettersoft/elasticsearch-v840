@@ -1,0 +1,438 @@
+[[changelog-client]]
+== Release notes
+
+[discrete]
+=== 8.2.1
+
+[discrete]
+==== Fixes
+
+[discrete]
+===== Support for Elasticsearch `v8.2.1`
+
+You can find all the API changes
+https://www.elastic.co/guide/en/elasticsearch/reference/8.2/release-notes-8.2.1.html[here].
+
+[discrete]
+===== Fix ndjson APIs https://github.com/elastic/elasticsearch-js/pull/1688[#1688]
+
+The previous release contained a bug that broken ndjson APIs.
+We have released `v8.2.0-patch.1` to address this.
+This fix is the same as the one we have released and we strongly recommend upgrading to this version.
+
+[discrete]
+===== Fix node shutdown apis https://github.com/elastic/elasticsearch-js/pull/1697[#1697]
+
+The shutdown APIs wheren't complete, this fix completes them.
+
+[discrete]
+==== Types: move query keys to body https://github.com/elastic/elasticsearch-js/pull/1693[#1693]
+
+The types definitions where wrongly representing the types of fields present in both query and body.
+
+[discrete]
+=== 8.2.0
+
+[discrete]
+==== Breaking changes
+
+[discrete]
+===== Drop Node.js v12 https://github.com/elastic/elasticsearch-js/pull/1670[#1670]
+
+According to our https://github.com/elastic/elasticsearch-js#nodejs-support[Node.js support matrix].
+
+[discrete]
+==== Features
+
+[discrete]
+===== Support for Elasticsearch `v8.2`
+
+You can find all the API changes
+https://www.elastic.co/guide/en/elasticsearch/reference/8.2/release-notes-8.2.0.html[here].
+
+[discrete]
+===== More lenient parameter checks https://github.com/elastic/elasticsearch-js/pull/1662[#1662]
+
+When creating a new client, an `undefined` `caFingerprint` no longer trigger an error for a http connection.
+
+[discrete]
+===== Update TypeScript docs and export estypes https://github.com/elastic/elasticsearch-js/pull/1675[#1675]
+
+You can import the full TypeScript requests & responses definitions as it follows:
+[source,ts]
+----
+import { estypes } from '@elastic/elasticsearch'
+----
+
+If you need the legacy definitions with the body, you can do the following:
+
+[source,ts]
+----
+import { estypesWithBody } from '@elastic/elasticsearch'
+----
+
+[discrete]
+==== Fixes
+
+[discrete]
+===== Updated hpagent to the latest version https://github.com/elastic/elastic-transport-js/pull/49[transport/#49]
+
+You can fing the related changes https://github.com/delvedor/hpagent/releases/tag/v1.0.0[here].
+
+[discrete]
+=== 8.1.0
+
+[discrete]
+==== Features
+
+[discrete]
+===== Support for Elasticsearch `v8.1`
+
+You can find all the API changes
+https://www.elastic.co/guide/en/elasticsearch/reference/8.1/release-notes-8.1.0.html[here].
+
+[discrete]
+===== Export SniffingTransport https://github.com/elastic/elasticsearch-js/pull/1653[#1653]
+
+Now the client exports the SniffingTransport class.
+
+[discrete]
+==== Fixes
+
+[discrete]
+===== Fix onFlushTimeout timer not being cleared when upstream errors https://github.com/elastic/elasticsearch-js/pull/1616[#1616]
+
+Fixes a memory leak caused by an error in the upstream dataset of the bulk helper.
+
+[discrete]
+===== Cleanup abort listener https://github.com/elastic/elastic-transport-js/pull/42[transport/#42]
+
+The legacy http client was not cleaning up the abort listener, which could cause a memory leak.
+
+[discrete]
+===== Improve undici performances https://github.com/elastic/elastic-transport-js/pull/41[transport/#41]
+
+Improve the stream body collection and keep alive timeout.
+
+[discrete]
+=== 8.0.0
+
+[discrete]
+==== Features
+
+[discrete]
+===== Support for Elasticsearch `v8.0`
+
+You can find all the API changes
+https://www.elastic.co/guide/en/elasticsearch/reference/8.0/release-notes-8.0.0.html[here].
+
+[discrete]
+===== Drop old typescript definitions
+
+*Breaking: Yes* | *Migration effort: Medium*
+
+The current TypeScript definitions will be removed from the client, and the new definitions, which contain request and response definitions as well will be shipped by default.
+
+[discrete]
+===== Drop callback-style API
+
+*Breaking: Yes* | *Migration effort: Large*
+
+Maintaining both API styles is not a problem per se, but it makes error handling more convoluted due to async stack traces.
+Moving to a full-promise API will solve this issue.
+
+[source,js]
+----
+// callback-style api
+client.search({ params }, { options }, (err, result) => {
+ console.log(err || result)
+})
+
+// promise-style api
+client.search({ params }, { options })
+  .then(console.log)
+  .catch(console.log)
+  
+// async-style (sugar syntax on top of promises)
+const response = await client.search({ params }, { options })
+console.log(response)
+----
+
+If you are already using the promise-style API, this won't be a breaking change for you.
+
+[discrete]
+===== Remove the current abort API and use the new AbortController standard
+
+*Breaking: Yes* | *Migration effort: Small*
+
+The old abort API makes sense for callbacks but it's annoying to use with promises
+
+[source,js]
+----
+// callback-style api
+const request = client.search({ params }, { options }, (err, result) => {
+ console.log(err) // RequestAbortedError
+})
+
+request.abort()
+
+// promise-style api
+const promise = client.search({ params }, { options })
+
+promise
+  .then(console.log)
+  .catch(console.log) // RequestAbortedError
+
+promise.abort()
+----
+
+Node v12 has added the standard https://nodejs.org/api/globals.html#globals_class_abortcontroller[`AbortController`] API which is designed to work well with both callbacks and promises.
+[source,js]
+----
+const ac = new AbortController()
+client.search({ params }, { signal: ac.signal })
+  .then(console.log)
+  .catch(console.log) // RequestAbortedError
+
+ac.abort()
+----
+
+[discrete]
+===== Remove the body key from the request
+
+*Breaking: Yes* | *Migration effort: Small*
+
+Thanks to the new types we are developing now we know exactly where a parameter should go.
+The client API leaks HTTP-related notions in many places, and removing them would definitely improve the DX.
+
+This could be a rather big breaking change, so a double solution could be used during the 8.x lifecycle. (accepting body keys without them being wrapped in the body as well as the current solution).
+
+[source,js]
+----
+// from
+const response = await client.search({
+  index: 'test',
+  body: {
+    query: {
+      match_all: {}
+    }
+  }
+})
+
+// to
+const response = await client.search({
+  index: 'test',
+  query: {
+    match_all: {}
+  }
+})
+----
+
+[discrete]
+===== Migrate to new separate transport
+
+*Breaking: Yes* | *Migration effort: Small to none*
+
+The separated transport has been rewritten in TypeScript and has already dropped the callback style API.
+Given that now is separated, most of the Elasticsearch specific concepts have been removed, and the client will likely need to extend parts of it for reintroducing them.
+If you weren't extending the internals of the client, this won't be a breaking change for you.
+
+[discrete]
+===== The returned value of API calls is the body and not the HTTP related keys
+
+*Breaking: Yes* | *Migration effort: Small*
+
+The client API leaks HTTP-related notions in many places, and removing them would definitely improve the DX.
+The client will expose a new request-specific option to still get the full response details.
+
+[source,js]
+----
+// from
+const response = await client.search({
+  index: 'test',
+  body: {
+    query: {
+      match_all: {}
+    }
+  }
+})
+console.log(response) // { body: SearchResponse, statusCode: number, headers: object, warnings: array }
+
+// to
+const response = await client.search({
+  index: 'test',
+  query: {
+    match_all: {}
+  }
+})
+console.log(response) // SearchResponse
+
+// with a bit of TypeScript and JavaScript magic...
+const response = await client.search({
+  index: 'test',
+  query: {
+    match_all: {}
+  }
+}, {
+  meta: true
+})
+console.log(response) // { body: SearchResponse, statusCode: number, headers: object, warnings: array }
+----
+
+[discrete]
+===== Use a weighted connection pool
+
+*Breaking: Yes* | *Migration effort: Small to none*
+
+Move from the current cluster connection pool to a weight-based implementation.
+This new implementation offers better performances and runs less code in the background, the old connection pool can still be used.
+If you weren't extending the internals of the client, this won't be a breaking change for you.
+
+[discrete]
+===== Migrate to the "undici" http client
+
+*Breaking: Yes* | *Migration effort: Small to none*
+
+By default, the HTTP client will no longer be the default Node.js HTTP client, but https://github.com/nodejs/undici[undici] instead.
+Undici is a brand new HTTP client written from scratch, it offers vastly improved performances and has better support for promises.
+Furthermore, it offers comprehensive and predictable error handling. The old HTTP client can still be used.
+If you weren't extending the internals of the client, this won't be a breaking change for you.
+
+[discrete]
+===== Drop support for old camelCased keys
+
+*Breaking: Yes* | *Migration effort: Medium*
+
+Currently, every path or query parameter could be expressed in both `snake_case` and `camelCase`. Internally the client will convert everything to `snake_case`. 
+This was done in an effort to reduce the friction of migrating from the legacy to the new client, but now it no longer makes sense.
+If you are already using `snake_case` keys, this won't be a breaking change for you.
+
+[discrete]
+===== Rename `ssl` option to `tls`
+
+*Breaking: Yes* | *Migration effort: Small*
+
+People usually refers to this as `tls`, furthermore, internally we use the tls API and Node.js refers to it as tls everywhere.
+[source,js]
+----
+// before
+const client = new Client({
+  node: 'https://localhost:9200',
+  ssl: {
+    rejectUnauthorized: false
+  }
+})
+
+// after
+const client = new Client({
+  node: 'https://localhost:9200',
+  tls: {
+    rejectUnauthorized: false
+  }
+})
+----
+
+[discrete]
+===== Remove prototype poisoning protection
+
+*Breaking: Yes* | *Migration effort: Small*
+
+Prototype poisoning protection is very useful, but it can cause performances issues with big payloads.
+In v8 it will be removed, and the documentation will show how to add it back with a custom serializer.
+
+[discrete]
+===== Remove client extensions API
+
+*Breaking: Yes* | *Migration effort: Large*
+
+Nowadays the client support the entire Elasticsearch API, and the `transport.request` method can be used if necessary. The client extensions API have no reason to exist.
+[source,js]
+----
+client.extend('utility.index', ({ makeRequest }) => {
+  return function _index (params, options) {
+    // your code
+  }
+})
+
+client.utility.index(...)
+----
+
+If you weren't using client extensions, this won't be a breaking change for you.
+
+[discrete]
+===== Move to TypeScript
+
+*Breaking: No* | *Migration effort: None*
+
+The new separated transport is already written in TypeScript, and it makes sense that the client v8 will be fully written in TypeScript as well.
+
+[discrete]
+===== Move from emitter-like interface to a diagnostic method
+
+*Breaking: Yes* | *Migration effort: Small*
+
+Currently, the client offers a subset of methods of the `EventEmitter` class, v8 will ship with a `diagnostic` property which will be a proper event emitter.
+[source,js]
+----
+// from
+client.on('request', console.log)
+
+// to
+client.diagnostic.on('request', console.log)
+----
+
+[discrete]
+===== Remove username & password properties from Cloud configuration
+
+*Breaking: Yes* | *Migration effort: Small*
+
+The Cloud configuration does not support ApiKey and Bearer auth, while the `auth` options does.
+There is no need to keep the legacy basic auth support in the cloud configuration.
+[source,js]
+----
+// before
+const client = new Client({
+  cloud: {
+    id: '<cloud-id>',
+    username: 'elastic',
+    password: 'changeme'
+  }
+})
+
+// after
+const client = new Client({
+  cloud: {
+    id: '<cloud-id>'
+  },
+  auth: {
+    username: 'elastic',
+    password: 'changeme'
+  }
+})
+----
+
+If you are already passing the basic auth options in the `auth` configuration, this won't be a breaking change for you.
+
+[discrete]
+===== Calling `client.close` will reject new requests
+
+Once you call `client.close` every new request after that will be rejected with a `NoLivingConnectionsError`. In-flight requests will be executed normally unless an in-flight request requires a retry, in which case it will be rejected.
+
+[discrete]
+===== Parameters rename
+
+- `ilm.delete_lifecycle`: `policy` parameter has been renamed to `name`
+- `ilm.get_lifecycle`: `policy` parameter has been renamed to `name`
+- `ilm.put_lifecycle`: `policy` parameter has been renamed to `name`
+- `snapshot.cleanup_repository`: `repository` parameter has been renamed to `name`
+- `snapshot.create_repository`: `repository` parameter has been renamed to `name`
+- `snapshot.delete_repository`: `repository` parameter has been renamed to `name`
+- `snapshot.get_repository`: `repository` parameter has been renamed to `name`
+- `snapshot.verify_repository`: `repository` parameter has been renamed to `name`
+
+[discrete]
+===== Removal of snake_cased methods
+
+The v7 client provided snake_cased methods, such as `client.delete_by_query`. This is no longer supported, now only camelCased method are present.
+So `client.delete_by_query` can be accessed with `client.deleteByQuery`
+

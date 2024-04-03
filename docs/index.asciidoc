@@ -1,0 +1,22 @@
+= Elasticsearch JavaScript Client
+
+:branch: master
+include::{asciidoc-dir}/../../shared/attributes.asciidoc[]
+
+include::introduction.asciidoc[]
+include::changelog.asciidoc[]
+include::installation.asciidoc[]
+include::connecting.asciidoc[]
+include::configuration.asciidoc[]
+include::basic-config.asciidoc[]
+include::advanced-config.asciidoc[]
+include::child.asciidoc[]
+include::testing.asciidoc[]
+include::integrations.asciidoc[]
+include::observability.asciidoc[]
+include::transport.asciidoc[]
+include::typescript.asciidoc[]
+include::reference.asciidoc[]
+include::examples/index.asciidoc[]
+include::helpers.asciidoc[]
+include::redirects.asciidoc[]
